@@ -31,7 +31,9 @@ def load_data(filepath, start_year, end_year):
 # get data series
 def get_series(df, name):
     sub_df = df[df['Series Name'] == name]
-    return sub_df[['Country Code', 'average']].reset_index(drop=True)
+    sub_df = sub_df[['Country Code', 'average']].copy()
+    sub_df.rename(columns={'average': name}, inplace=True)
+    return sub_df.reset_index(drop=True)
 
 def merge_data(dfs, names):
     merged = dfs[0]
