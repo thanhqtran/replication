@@ -95,59 +95,6 @@ r2_e = r2_score(e_plus_theta_data - theta, e_hat)
 print(f"R² for n: {r2_n:.4f}")
 print(f"R² for e: {r2_e:.4f}")
 
-# Compute Standard Errors, t-Statistics, and p-Values of estimated paramters
-from scipy.optimize import approx_fprime
-from scipy.linalg import inv
-from scipy.stats import norm
-
-# Numerical gradient and Hessian
-# calculation of std. dev follows here:
-# https://www.sherrytowers.com/mle_introduction.pdf#page=8.81
-def grad_loglik(params):
-    eps = np.sqrt(np.finfo(float).eps)
-    return approx_fprime(params, lambda p: -neg_log_likelihood(p, y_data, n_data, e_plus_theta_data), eps)
-
-def hessian(f, params, epsilon=1e-5):
-    n = len(params)
-    hess = np.zeros((n, n))
-    fx = f(params)
-    for i in range(n):
-        x1 = np.array(params)
-        x1[i] += epsilon
-        f1 = f(x1)
-        for j in range(i, n):
-            x2 = np.array(params)
-            x2[j] += epsilon
-            if i == j:
-                f2 = f(x2)
-                hess[i, j] = (f2 - 2 * f1 + fx) / (epsilon ** 2)
-            else:
-                x3 = np.array(params)
-                x3[i] += epsilon
-                x3[j] += epsilon
-                f3 = f(x3)
-                hess[i, j] = hess[j, i] = (f3 - f1 - f1 + fx) / (epsilon ** 2)
-    return hess
-
-# Hessian at optimum
-hess = hessian(lambda p: -neg_log_likelihood(p, y_data, n_data, e_plus_theta_data), estimated_params)
-
-# Invert to get covariance matrix
-cov_matrix = inv(hess)
-
-# Standard errors
-standard_errors = np.sqrt(np.diag(cov_matrix))
-
-# t-stats and p-values
-t_stats = estimated_params / standard_errors
-p_values = 2 * (1 - norm.cdf(np.abs(t_stats)))
-
-# Print results
-param_names = ['eta', 'phi', 'theta', 'gamma', 'log(sigma_n)', 'log(sigma_e)']
-for i, name in enumerate(param_names):
-    print(f"{name:<12}: {estimated_params[i]:.4f} ± {standard_errors[i]:.4f}, "
-          f"t = {t_stats[i]:.2f}, p = {p_values[i]:.4f}")
-
 #=============================================
 # --- Robustness check using other algorithms
 # --- OPTIONAL ------------------------------
