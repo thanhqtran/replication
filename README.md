@@ -1,2 +1,2 @@
-# replication
-Replication of some interesting papers
+# Replication
+Replication of some interesting papers, book chapters, for study purposes.
