@@ -148,3 +148,95 @@ for i, name in enumerate(param_names):
     print(f"{name:<12}: {estimated_params[i]:.4f} ± {standard_errors[i]:.4f}, "
           f"t = {t_stats[i]:.2f}, p = {p_values[i]:.4f}")
 
+#=============================================
+# --- Robustness check using other algorithms
+# --- OPTIONAL ------------------------------
+# I find this method 'L-BFGS-B' resembles the closest to the chapter
+
+# Test different optimization methods
+np.set_printoptions(suppress=True)
+
+methods = ['Powell', 'Nelder-Mead', 'L-BFGS-B']
+
+# initialize a dictionary to store results from each method
+results = {}
+
+for method in methods:
+    print(f"\n--- Method: {method} ---")
+    result = minimize(
+        neg_log_likelihood,
+        initial_guess,
+        args=(y_data, n_data, e_plus_theta_data),
+        method=method,
+        options={'disp': True, 'maxiter': 100000}
+    )
+    results[method] = result
+    print("Estimated parameters:", result.x)
+
+# model selection crieterion
+import numpy as np
+from sklearn.metrics import r2_score, mean_squared_error
+
+def evaluate_model(params, y_data, n_data, e_plus_theta_data):
+    eta, phi, theta, gamma = params[:4]
+    log_sigma_n, log_sigma_e = params[4], params[5]
+    sigma_n = np.exp(log_sigma_n)
+    sigma_e = np.exp(log_sigma_e)
+    k = 6  # number of parameters
+    n_obs = len(y_data)
+
+    # Get model predictions
+    w_hat, e_plus_theta_hat, n_hat = compute_model_values(y_data, n_data, eta, phi, theta, gamma)
+
+    # Compute residuals
+    res_n = n_data - n_hat
+    res_e = e_plus_theta_data - e_plus_theta_hat
+
+    # Log-likelihood
+    ll = -0.5 * np.sum(np.log(2 * np.pi * sigma_n ** 2) + (res_n ** 2) / sigma_n ** 2) \
+         -0.5 * np.sum(np.log(2 * np.pi * sigma_e ** 2) + (res_e ** 2) / sigma_e ** 2)
+
+    # AIC and BIC
+    aic = 2 * k - 2 * ll
+    bic = k * np.log(n_obs) - 2 * ll
+
+    # R² scores and RMSE
+    r2_n = r2_score(n_data, n_hat)
+    r2_e = r2_score(e_plus_theta_data, e_plus_theta_hat)
+
+    rmse_n = np.sqrt(mean_squared_error(n_data, n_hat))
+    rmse_e = np.sqrt(mean_squared_error(e_plus_theta_data, e_plus_theta_hat))
+
+    return {
+        'log_likelihood': ll,
+        'AIC': aic,
+        'BIC': bic,
+        'R2_n': r2_n,
+        'R2_e+θ': r2_e,
+        'RMSE_n': rmse_n,
+        'RMSE_e+θ': rmse_e
+    }
+
+# Evaluate the model with the estimated parameters
+model1 = results['L-BFGS-B']
+model2 = results['Powell']
+model3 = results['Nelder-Mead']
+evaluation1 = evaluate_model(model1.x, y_data, n_data, e_plus_theta_data)
+evaluation2 = evaluate_model(model2.x, y_data, n_data, e_plus_theta_data)
+evaluation3 = evaluate_model(model3.x, y_data, n_data, e_plus_theta_data)
+# Print evaluation results
+print("\n--- Evaluation Results for L-BFGS-B ---")
+for key, value in evaluation1.items():
+    print(f"{key}: {value:.4f}")
+print("\n--- Evaluation Results for Powell ---")
+for key, value in evaluation2.items():
+    print(f"{key}: {value:.4f}")
+print("\n--- Evaluation Results for Nelder-Mead ---")
+for key, value in evaluation3.items():
+    print(f"{key}: {value:.4f}")
+# Compare the evaluations
+evaluations = {
+    'L-BFGS-B': evaluation1,
+    'Powell': evaluation2,
+    'Nelder-Mead': evaluation3
+}
