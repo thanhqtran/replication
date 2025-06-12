@@ -7,21 +7,27 @@ Main functional equations in page 12 and 17 of [de la Croix, 2012](https://www.c
 if $w^i_t > \theta/\eta\phi$:
 
 $$
-e^i_t = \frac{\eta \phi w^i_t - \theta}{1-\eta}, \\
-n^i_t = frac{(1-\eta)\gamma w^i_t}{(\phi w^i_t - \theta)(1+\gamma)}
+e^i_t = \frac{\eta \phi w^i_t - \theta}{1-\eta},
 $$
 
-otherwise
+$$
+n^i_t = \frac{(1-\eta)\gamma w^i_t}{(\phi w^i_t - \theta)(1+\gamma)}.
+$$
+
+otherwise,
 
 $$
-e^i_t = 0, \\
-n^i_t = \frac{\gamma}{\phi(1+\gamma)}
+e^i_t = 0,
+$$
+
+$$
+n^i_t = \frac{\gamma}{\phi(1+\gamma)}.
 $$
 
 with
 
 $$
-w^i_t = y^i_t = v (1-\phi n)
+w^i_t = y^i_t = v (1-\phi n).
 $$
 
 ## Data
