@@ -10,73 +10,62 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# adjust the year here if necessary
+import pandas as pd
+
+# === input ===
 start_year = 1998
 end_year = 2002
+input_file = 'P_Data_Extract_From_World_Development_Indicators.xlsx'
+output_file = 'dataset.csv'
 
-# ========================
-# import data
-data_raw = pd.read_excel('P_Data_Extract_From_World_Development_Indicators.xlsx')
-# create index
-df = pd.DataFrame(data_raw, index=range(0, len(data_raw.index)))
-# extract all columns names
-columns = df.columns
-no_cols = end_year - start_year + 1
-# extract the last no_cols columns, which contain the data
-numeric_cols = df.columns[-no_cols:]
-# convert everything to numeric
-df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors='coerce')  # coerce errors to NaN
 
-# ========================
-# data preprocessing
+# --- Functions ---
+# load data and convert all data to numeric, then calculate average
+def load_data(filepath, start_year, end_year):
+    df = pd.read_excel(filepath)
+    year_cols = df.columns[-(end_year - start_year + 1):]
+    df[year_cols] = df[year_cols].apply(pd.to_numeric, errors='coerce')
+    df['average'] = df[year_cols].mean(axis=1)
+    return df
+    
+# get data series
+def get_series(df, name):
+    sub_df = df[df['Series Name'] == name]
+    return sub_df[['Country Code', 'average']].reset_index(drop=True)
 
-# create a new empty column
-df['average'] = df[numeric_cols].mean(axis=1)
+def merge_data(dfs, names):
+    merged = dfs[0]
+    for d in dfs[1:]:
+        merged = pd.merge(merged, d, on='Country Code')
+    merged.columns = ['country'] + names
+    return merged
 
-# A function to extract data from the dataframe
-def extract_data(series_name, data_frame):
-    series_name = series_name
-    data_frame = data_frame
-    filtered_df = data_frame[data_frame['Series Name'] == series_name]
-    filtered_values = filtered_df[['Country Code', 'average']]
-    return filtered_values.reset_index(drop=True)
+# --- Workflow ---
 
-# extract Series Name
-Names = df['Series Name'].unique()
+# Load and prepare data
+df = load_data(input_file, start_year, end_year)
+series_list = df['Series Name'].unique()
 
-# extract individual data 
-fertlity_values = extract_data(Names[0], df)
-infant_mortality_values = extract_data(Names[1], df)
-edu_values = extract_data(Names[2], df)
-gni_values = extract_data(Names[3], df)
-pop = extract_data(Names[4], df)
+# Extract needed series
+fertility = get_series(df, series_list[0])
+infant_mort = get_series(df, series_list[1])
+edu = get_series(df, series_list[2])
+gni = get_series(df, series_list[3])
+pop = get_series(df, series_list[4])
 
-# merge all the 5 dataframes by country code
-merged1 = pd.merge(fertlity_values, infant_mortality_values, on='Country Code')
-merged2 = pd.merge(merged1, edu_values, on='Country Code')
+# Merge into one dataset
+merged = merge_data(
+    [fertility, infant_mort, edu, gni, pop],
+    ['fertility', 'infant_mort', 'edu', 'gni', 'pop']
+)
+
+# Compute final values
+merged = merged.dropna()
+merged['net_fertility'] = merged['fertility'] / 2 * (1 - merged['infant_mort'] / 1000)
+merged['total_edu'] = merged['edu'] / 100 * merged['gni']
+# extract only necessary variables
+final = merged[['country', 'net_fertility', 'gni', 'total_edu']]
 # rename
-merged2.columns = ['Country Code', 'fertility',
-                   'infant_mort', 'edu']
-merged3 = pd.merge(merged2, gni_values, on='Country Code')
-merged4 = pd.merge(merged3, gdp_values, on='Country Code')
-# rename
-merged4.columns = ['country', 'fertility',
-                   'infant_mort', 'edu', 'gni', 'pop']
+final.columns = ['country', 'n', 'y', 'e+theta']
+final.to_csv(output_file, index=False)
 
-# ========================
-# compute some values
-
-# make a new dataset
-data_est = merged4.copy()
-# delete all NaN
-data_est.dropna(inplace=True)
-# calculate net_fertility and total education spending
-data_est['net_fertility'] = data_est['fertility'] / 2 * (1  - data_est['infant_mort']/1000)
-data_est['total_edu'] = data_est['edu']/100 * data_est['gni']
-
-# =========================
-# export the cleaned dataset to csv
-data = data_est[['country', 'net_fertility', 'gni', 'total_edu']]
-# rename columns
-data.columns = ['country', 'n', 'y', 'e+theta']
-data.to_csv('dataset.csv')
