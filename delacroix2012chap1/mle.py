@@ -41,7 +41,7 @@ def compute_model_values(y, n, eta, phi, theta, gamma):
     return w, e_plus_theta, n_model
 
 # log-likelihood function
-def log_likelihood(params, y_data, n_data, e_plus_theta_data):
+def neg_log_likelihood(params, y_data, n_data, e_plus_theta_data):
     eta, phi, theta, gamma, log_sigma_n, log_sigma_e = params
     sigma_n = np.exp(log_sigma_n)
     sigma_e = np.exp(log_sigma_e)
@@ -73,7 +73,7 @@ result = minimize(
     neg_log_likelihood, 
     initial_guess, 
     args=(y_data, n_data, e_plus_theta_data), 
-    method='Nelder-Mead',
+    method='L-BFGS-B',
     options={'disp': True}
 )
 estimated_params = result.x
